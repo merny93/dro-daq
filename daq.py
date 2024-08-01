@@ -2,14 +2,16 @@ from pyftdi import gpio as gp
 import time
 import threading
 import numpy as np
+import matplotlib.pyplot as plt
 
-SAMPLE_FREQ = int(1e6)
+SAMPLE_FREQ = int(1e5)
 SPI_RATE = int(4e3)
 SPI_LENGTH = 24
 SPI_WINDOW = int(SPI_LENGTH / SPI_RATE * SAMPLE_FREQ)
-SPI_WINDOW_N = 10
+SPI_WINDOW_N = 12
 PACKET_SEPARATION = 120e-3
-PLL_GAIN = 0.5
+PLL_PHASE_GAIN = 0.5
+PLL_CENTER_GAIN = 0.05
 
 PIN_CLK = 1
 PIN_DATA = 0
@@ -44,7 +46,7 @@ def decode_spi(clk, data):
     if np.sum(np.abs(edges)) == 0:
         print("no edges found")
         return
-
+    
     edges_idx = np.argwhere(edges == 1).flatten()
     
     #the first edge is the start of the packet, ignore it
@@ -86,7 +88,7 @@ def adjust_delay(clk):
     first_edge = np.argmax(edges)
     if first_edge == 0:
         return 0
-    error = first_edge / SAMPLE_FREQ
+    error = (first_edge - clk.size/2) / SAMPLE_FREQ
     return error
 
 for _ in range(10000):
@@ -103,10 +105,12 @@ for _ in range(10000):
 time.sleep(PACKET_SEPARATION - (SPI_WINDOW*SPI_WINDOW_N) / SAMPLE_FREQ)
 
 class pll_reader:
-    error = 0
+    phase_error = 0
+    centering_error = 0
     delays = np.zeros(2)
+
     def pll_read(self):
-        threading.Timer(PACKET_SEPARATION - self.error, self.pll_read).start()
+        threading.Timer(PACKET_SEPARATION - self.phase_error - self.centering_error, self.pll_read).start()
         data = ctl.read(SPI_WINDOW*SPI_WINDOW_N)
         clk, data = parse_data(data)
         if self.pll_adjust(clk):
@@ -117,6 +121,7 @@ class pll_reader:
         
     def pll_adjust(self, clk):
         delay_error = adjust_delay(clk)
+        print(delay_error)
         self.delays[1] = delay_error
         self.delays = np.unwrap(self.delays, period=SPI_WINDOW*SPI_WINDOW_N/SAMPLE_FREQ)
 
@@ -124,7 +129,11 @@ class pll_reader:
         self.delays[0] = self.delays[1]
         
         # value = decode_packet(data)
-        self.error += PLL_GAIN*delta_delay
+        self.phase_error += PLL_PHASE_GAIN*delta_delay
+
+        #push the signal to the center and correct the phase error since we are introducing some
+        self.centering_error = -PLL_CENTER_GAIN*delay_error
+        self.delays[0] -= PLL_CENTER_GAIN*delay_error
 
         n_edges = np.sum(np.abs(np.diff(clk)))
         if n_edges != 48:
