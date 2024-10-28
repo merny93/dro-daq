@@ -1,0 +1,28 @@
+[package]
+name = "rustypi"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.3"
+critical-section = "1.1.2"
+embassy-executor = { version = "0.6.0", features = [
+    "arch-cortex-m",
+    "executor-thread",
+    "integrated-timers",
+] }
+embassy-rp = { version = "0.2.0", features = ["time-driver"] }
+embassy-sync = "0.6.0"
+embassy-time = "0.3.2"
+embassy-usb = "0.3.0"
+embedded-hal = "1.0.0"
+fixed = "1.28.0"
+fixed-macro = "1.2.0"
+panic-halt = "1.0.0"
+pio = "0.2.1"
+pio-proc = "0.2.2"
+portable-atomic = { version = "1.9.0", features = ["critical-section"] }
+static_cell = "2.1.0"
