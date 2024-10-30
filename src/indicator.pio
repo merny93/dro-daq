@@ -1,0 +1,18 @@
+.program indicator
+; start of program at 0 so we can jump back to it
+.origin 0
+    set pindirs, 0b00;
+
+    ;grab the length of the word from the fifo
+    pull block;
+    mov x, osr;
+bitloop:
+    wait 1 pin 1; wait for high  
+    wait 0 pin 1; wait for low
+    in pins, 1; grap the data on the correct edge
+    jmp x-- bitloop; decrement x and loop if not zero
+    ; got here so the word is done so push from the isr to the fifo
+    push noblock;
+    irq 3;
+
+

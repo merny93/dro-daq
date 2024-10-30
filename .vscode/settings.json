@@ -1,4 +1,7 @@
 {
     "rust-analyzer.check.allTargets": false,
     "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
+    "rust-analyzer.cargo.extraEnv": {
+        "CARGO_BUILD_RERUN_IF_CHANGED": "indicator.pio"
+    }
 }
